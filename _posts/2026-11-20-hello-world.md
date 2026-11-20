@@ -1,6 +1,9 @@
 ---
-layout: post
+layout: single
 title: "我的第一篇博客"
+author_profile: true
+toc: true
+toc_label: "文章目录"
 ---
 
 这是我的第一篇文章，使用 Markdown 编写。
