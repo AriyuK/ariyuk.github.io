@@ -1,7 +1,20 @@
-title: 我的博客
-description: 记录学习、技术与生活
-theme: minima
-lang: zh-CN
-timezone: Asia/Hong_Kong
+title: AriyuK 的博客
+description: 记录学习、项目与生活
 url: "https://ariyuk.github.io"
 baseurl: ""
+timezone: Asia/Hong_Kong
+locale: zh-CN
+
+remote_theme: "mmistakes/minimal-mistakes@4.28.1"
+minimal_mistakes_skin: "default"
+
+author:
+  name: AriyuK
+
+plugins:
+  - jekyll-remote-theme
+  - jekyll-include-cache
+  - jekyll-paginate
+
+paginate: 5
+paginate_path: /page:num/
