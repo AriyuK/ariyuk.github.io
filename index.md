@@ -1,5 +1,6 @@
 ---
 layout: home
+author_profile: true
 ---
 
 欢迎来到我的博客！这里记录我的学习和生活。
