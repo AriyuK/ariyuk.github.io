@@ -10,6 +10,8 @@ minimal_mistakes_skin: "neon"
 
 author:
   name: AriyuK
+  avatar: "/assets/images/avatar.png"
+  bio: "记录学习收获"
 
 plugins:
   - jekyll-remote-theme
