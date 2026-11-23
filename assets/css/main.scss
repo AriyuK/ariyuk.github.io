@@ -19,7 +19,7 @@ body {
 
 /* 正文和侧栏区域的半透明底色 */
 #main {
-  background-color: rgba($background-color, 0.9);
+  background-color: rgba($background-color, 0.75);
   border-radius: 12px;
   padding: 24px;
   margin-top: 24px;
@@ -29,7 +29,7 @@ body {
 /* 导航栏和页脚的底色 */
 .masthead,
 .page__footer {
-  background-color: rgba($background-color, 0.95);
+  background-color: rgba($background-color, 0.75);
 }
 
 /* 手机端使用随页面滚动的背景 */
