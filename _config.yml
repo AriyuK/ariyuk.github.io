@@ -1,5 +1,5 @@
-title: AriyuK 的博客
-description: 记录学习、项目与生活
+title: Slow Steps, Feel the World 
+description: 记录学习中的收获
 url: "https://ariyuk.github.io"
 baseurl: ""
 timezone: Asia/Hong_Kong
@@ -11,7 +11,7 @@ minimal_mistakes_skin: "neon"
 author:
   name: AriyuK
   avatar: "/assets/images/avatar.png"
-  bio: "记录学习收获"
+  bio: "电子信息硕士在读<br>喜爱音乐、游戏<br>目标是成为优秀的游戏开发者<br>和“艺术家”"
 
 plugins:
   - jekyll-remote-theme
