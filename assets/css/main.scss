@@ -1,0 +1,40 @@
+---
+search: false
+---
+
+@charset "utf-8";
+
+@import "minimal-mistakes/skins/{{ site.minimal_mistakes_skin | default: 'default' }}";
+@import "minimal-mistakes";
+
+/* 整页背景图片 */
+body {
+  background-color: $background-color;
+  background-image: url("{{ '/assets/images/background.jpg' | relative_url }}");
+  background-position: center;
+  background-size: cover;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+}
+
+/* 正文和侧栏区域的半透明底色 */
+#main {
+  background-color: rgba($background-color, 0.9);
+  border-radius: 12px;
+  padding: 24px;
+  margin-top: 24px;
+  margin-bottom: 24px;
+}
+
+/* 导航栏和页脚的底色 */
+.masthead,
+.page__footer {
+  background-color: rgba($background-color, 0.95);
+}
+
+/* 手机端使用随页面滚动的背景 */
+@media (max-width: 768px) {
+  body {
+    background-attachment: scroll;
+  }
+}
