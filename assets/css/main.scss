@@ -38,3 +38,64 @@ body {
     background-attachment: scroll;
   }
 }
+
+/* 内容居中，两侧留出空间 */
+#main {
+  width: calc(100% - 48px);
+  max-width: 1400px;
+  margin: 32px auto;
+}
+
+/* 代码块使用黑底、浅色文字 */
+.page__content .highlighter-rouge,
+.page__content .highlight,
+.page__content pre,
+.page__content pre code {
+  background: #0d1117;
+  color: #e6edf3;
+}
+
+.page__content pre {
+  border: 1px solid #30363d;
+  border-radius: 8px;
+  overflow-x: auto;
+}
+
+/* 清除原主题针对浅色代码块的文字配色 */
+.page__content .highlight span {
+  color: inherit;
+  background: transparent;
+}
+
+/* 设置适合黑底的语法高亮 */
+.page__content .highlight .k,
+.page__content .highlight .kt {
+  color: #ff7b72;
+}
+
+.page__content .highlight .s,
+.page__content .highlight .s1,
+.page__content .highlight .s2 {
+  color: #a5d6ff;
+}
+
+.page__content .highlight .m,
+.page__content .highlight .mi,
+.page__content .highlight .mf {
+  color: #79c0ff;
+}
+
+.page__content .highlight .c,
+.page__content .highlight .c1,
+.page__content .highlight .cm {
+  color: #8b949e;
+}
+
+/* 手机端保留较小的边距 */
+@media (max-width: 768px) {
+  #main {
+    width: calc(100% - 24px);
+    margin: 16px auto;
+    padding: 16px;
+  }
+}
