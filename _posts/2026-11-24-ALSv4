@@ -1,0 +1,210 @@
+---
+
+layout: single  
+title: "ALSv4学习与拆解"  
+excerpt: "ALS学习中"  
+author_profile: true  
+toc: true  
+toc_label: "文章目录"  
+categories:
+
++ 学习笔记  
+tags:
++ Jekyll
+
+---
+
+## 计算当角色处于地面时动画蓝图需要的数值
+### Update Movement Values
+#### Calculate Velocity Blend
+![Set Velocity Blend]({{ '/assets/images/CalculateVelocityBlend.png' }})
+
+把角色的速度转换成**前、后、左、右四个连续的动画混合权重**，返回 `VelocityBlend` 结构体：
+
+| 字段 | 含义 |
+| --- | --- |
+| `F` | Forward，向前权重 |
+| `B` | Backward，向后权重 |
+| `L` | Left，向左权重 |
+| `R` | Right，向右权重 |
+
+
+**1. 提取速度方向，转换到角色局部坐标系**
+
+```cpp
+LocalDirection = CharacterRotation.UnrotateVector(
+    Velocity.GetSafeNormal(0.1)
+);
+```
+
+先归一化速度，去掉速度大小的影响，再用 **Character 的 Actor Rotation** 进行逆旋转。转换后：
+
++ `X > 0` 表示相对角色向前，`X < 0` 表示向后。
++ `Y > 0` 表示向右，`Y < 0` 表示向左。
+
+因此，方向相同的慢走和快跑，会得到相同的目标权重。
+
+**2. 按分量绝对值之和重新分配比例**
+
+蓝图接着计算：
+
+```cpp
+Sum = Abs(LocalDirection.X)
+    + Abs(LocalDirection.Y)
+    + Abs(LocalDirection.Z);
+
+RelativeDirection = LocalDirection / Sum;
+```
+
+这一步让水平斜向移动的权重更适合混合动画。例如右前方 `45°`：
+
+```latex
+普通归一化方向 ≈ (0.707, 0.707, 0)
+
+Sum ≈ 1.414
+
+RelativeDirection = (0.5, 0.5, 0)
+```
+
+这样就能得到前方 `50%`、右方 `50%`。
+
+**3. 按正负拆成四个非负权重**
+
+角色在地面时，`Z=0`：
+
+| 局部速度 `(X,Y)` | F | B | L | R |
+| --- | ---: | ---: | ---: | ---: |
+| `(100,0)`，向前 | 1 | 0 | 0 | 0 |
+| `(-100,0)`，向后 | 0 | 1 | 0 | 0 |
+| `(0,-100)`，向左 | 0 | 0 | 1 | 0 |
+| `(100,100)`，右前方 | 0.5 | 0 | 0 | 0.5 |
+| `(200,-100)`，偏前的左前方 | 0.667 | 0 | 0.333 | 0 |
+
+
+```cpp
+#include "CoreMinimal.h"
+
+struct FVelocityBlend
+{
+    double F = 0.0;
+    double B = 0.0;
+    double L = 0.0;
+    double R = 0.0;
+};
+
+FVelocityBlend CalculateVelocityBlend(
+    const FVector& WorldVelocity,
+    const FRotator& CharacterRotation)
+{
+    // 对应 Normalize，蓝图中的 Tolerance 为 0.1。
+    const FVector VelocityDirection = WorldVelocity.GetSafeNormal(0.1);
+
+    // 将世界方向转换为相对于角色的局部方向。
+    const FVector LocalDirection = CharacterRotation.UnrotateVector(VelocityDirection);
+    // 角色在地面时执行的函数，Z分量为0
+    const double Sum =
+        FMath::Abs(LocalDirection.X) +
+        FMath::Abs(LocalDirection.Y) +
+        FMath::Abs(LocalDirection.Z);
+    // 让X + Y = 1，角色在对角线行走时，X = 0.5, Y = 0.5
+    // 这样能够让alpha的值为0.5，而不是0.707
+    const FVector RelativeDirection = LocalDirection / Sum;
+
+    FVelocityBlend Result;
+
+    Result.F = FMath::Clamp(RelativeDirection.X, 0.0, 1.0);
+    Result.B = FMath::Abs(FMath::Clamp(RelativeDirection.X, -1.0, 0.0));
+
+    Result.L = FMath::Abs(FMath::Clamp(RelativeDirection.Y, -1.0, 0.0));
+    Result.R = FMath::Clamp(RelativeDirection.Y, 0.0, 1.0);
+
+    return Result;
+}
+```
+
+#### Calculate Diagonal Scale Amount  
+计算**斜向移动时，脚部 IK 需要增加多少水平缩放补偿**，避免方向动画混合后，脚的移动距离变短。
+
+```cpp
+return DiagonalScaleAmountCurve.GetFloatValue(
+    Abs(VelocityBlend.F + VelocityBlend.B)
+);
+```
+
+**1. 用前后权重之和，判断移动方向有多偏向纵向**
+
+结合前面的 `Calculate Velocity Blend`：
+
+| 移动方向 | `F + B` |
+| --- | ---: |
+| 正左、正右 | 0 |
+| 四个方向的 `45°` 斜向 | 0.5 |
+| 正前、正后 | 1 |
+
+
+**2. 查询曲线，得到补偿强度**
+
+当前引用的是 `DiagonalScaleAmount` 曲线
+
+| `F + B` | 曲线输出 | 补偿效果 |
+| ---: | ---: | --- |
+| 0 | 0 | 无补偿 |
+| 0.25 | 0.5 | 一半补偿 |
+| 0.5 | 1 | 完全补偿 |
+| 0.75 | 0.5 | 一半补偿 |
+| 1 | 0 | 无补偿 |
+
+
+因此，**纯前后、纯左右移动不补偿，斜向移动时补偿最强。**
+
+曲线资源实际只有 `(0,0)`、`(0.5,1)` 两个关键点，后段通过 `Oscillate` 外推镜像得到，所以输入为 `1` 时输出回到 `0`。
+
+**3. 返回值控制 **`ik_foot_root`** 缩放节点的 Alpha**
+
+在站立和蹲伏的 `Locomotion Cycles` 中，实际连接是：
+
+```latex
+DiagonalScaleAmount
+        ↓ Alpha
+Transform (Modify) Bone
+    Bone：ik_foot_root
+    Scale：(1.4, 1.4, 1.0)
+    Scale Mode：Add to Existing
+```
+
+**返回值是补偿强度 Alpha，不是最终缩放倍率。** 原始缩放为 `1` 时，可以这样理解：
+
+```cpp
+HorizontalScale = Lerp(1.0, 1.4, DiagonalScaleAmount);
+```
+
+Alpha 为 `0` 时保持原状；为 `1` 时，脚部 IK 根骨骼的水平缩放达到 `1.4` 倍，垂直方向保持原状。
+
+**为什么斜向需要补偿？**
+
+用一个简化例子：前进动画中脚的位移是 `(D,0)`，右移动画中是 `(0,D)`。各混合一半后：
+
+```latex
+混合位移 = 0.5 × (D,0) + 0.5 × (0,D)
+         = (0.5D, 0.5D)
+
+位移长度 ≈ 0.707D
+```
+
+方向变成了右前方，但距离缩短了。恢复长度需要约 `√2 ≈ 1.414` 倍缩放，ALS 在这里使用接近的 **1.4 倍**。
+
+```cpp
+#include "Curves/CurveFloat.h"
+
+float CalculateDiagonalScaleAmount(
+    const FVelocityBlend& VelocityBlend,
+    const UCurveFloat& DiagonalScaleAmountCurve)
+{
+    const double ForwardBackwardWeight =
+        FMath::Abs(VelocityBlend.F + VelocityBlend.B);
+
+    return DiagonalScaleAmountCurve.GetFloatValue(
+        static_cast<float>(ForwardBackwardWeight)
+    );
+}
+```
